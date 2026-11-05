@@ -1,0 +1,13 @@
+# OS & Editor Artifacts
+.DS_Store
+*.swp
+*.tmp
+*~
+
+# Build & Logs
+node_modules/
+dist/
+*.log
+
+# Colab checkpoints
+.ipynb_checkpoints/
