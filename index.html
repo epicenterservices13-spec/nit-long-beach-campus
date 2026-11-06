@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🏛️ National Institute of Technology, Long Beach (NIT-LB) — 3D Campus</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #040810;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #fff;
+            touch-action: none;
+        }
+        #webgl-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        /* Top Navigation Header */
+        #campus-header {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+            background: rgba(8, 14, 26, 0.88);
+            backdrop-filter: blur(8px);
+            border: 2px solid #00e5ff;
+            border-radius: 10px;
+            padding: 14px 22px;
+            box-shadow: 0 0 25px rgba(0, 229, 255, 0.35);
+            pointer-events: none;
+        }
+        #campus-header h1 {
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: #00e5ff;
+            text-transform: uppercase;
+        }
+        #campus-header p {
+            font-size: 12px;
+            color: #8da4c4;
+            margin-top: 3px;
+        }
+        /* Camera Preset Buttons */
+        #camera-presets {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 15;
+            display: flex;
+            gap: 8px;
+        }
+        .cam-btn {
+            background: rgba(12, 20, 36, 0.9);
+            color: #fff;
+            border: 1px solid #00e5ff;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .cam-btn:hover {
+            background: #00e5ff;
+            color: #000;
+            box-shadow: 0 0 15px #00e5ff;
+        }
+        /* Telemetry & Curriculum HUD */
+        #telemetry-card {
+            position: absolute;
+            bottom: 25px;
+            left: 20px;
+            right: 20px;
+            max-width: 480px;
+            z-index: 10;
+            background: rgba(6, 12, 24, 0.94);
+            backdrop-filter: blur(12px);
+            border: 2px solid #ffaa00;
+            border-radius: 12px;
+            padding: 18px 24px;
+            box-shadow: 0 0 30px rgba(255, 170, 0, 0.35);
+            pointer-events: none;
+            transition: border-color 0.3s;
+        }
+        #telemetry-card.empty {
+            border-color: #2a3a55;
+            box-shadow: none;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 900;
+            color: #ffaa00;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 6px;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+            padding-bottom: 4px;
+        }
+        .data-label {
+            color: #8da4c4;
+        }
+        .data-value {
+            font-weight: 700;
+            color: #00e5ff;
+            text-align: right;
+        }
+        #waterfront-banner {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            z-index: 10;
+            font-size: 11px;
+            color: #4a668a;
+            background: rgba(4, 8, 16, 0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+    </style>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <canvas id="webgl-canvas"></canvas>
+
+    <div id="campus-header">
+        <h1>🏛️ NATIONAL INSTITUTE OF TECHNOLOGY // LONG BEACH</h1>
+        <p>COASTAL POLYTECHNIC CAMPUS • 720-HOUR MECHANICAL ARCHITECTURE</p>
+    </div>
+
+    <div id="camera-presets">
+        <button class="cam-btn" onclick="setView('pagoda')">PAGODA</button>
+        <button class="cam-btn" onclick="setView('aerospace')">AEROSPACE</button>
+        <button class="cam-btn" onclick="setView('maritime')">MARITIME</button>
+        <button class="cam-btn" onclick="setView('overview')">OVERVIEW</button>
+    </div>
+
+    <div id="telemetry-card">
+        <div class="card-title" id="hud-title">SELECT CAMPUS FACILITY IN 3D SPACE</div>
+        <div class="data-row"><span class="data-label">Curriculum Block:</span><span class="data-value" id="hud-curriculum">—</span></div>
+        <div class="data-row"><span class="data-label">Contact Hours:</span><span class="data-value" id="hud-hours">—</span></div>
+        <div class="data-row"><span class="data-label">Primary Machinery:</span><span class="data-value" id="hud-machines">—</span></div>
+        <div class="data-row"><span class="data-label">Electrical Service:</span><span class="data-value" id="hud-power">—</span></div>
+        <div class="data-row" style="border:none;"><span class="data-label">Industrial Accreditation:</span><span class="data-value" id="hud-accredit">—</span></div>
+    </div>
+
+    <div id="waterfront-banner">
+        LONG BEACH PACIFIC BASIN // THREE.JS DIGITAL TWIN
+    </div>
+
+    <script>
+        const canvas = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a1424);
+        scene.fog = new THREE.FogExp2(0x0a1424, 0.0016);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 2500);
+        camera.position.set(240, 160, 260);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.04;
+        controls.minDistance = 25;
+        controls.maxDistance = 900;
+
+        // Lighting
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambient);
+
+        const sun = new THREE.DirectionalLight(0xfffaed, 1.3);
+        sun.position.set(160, 240, 120);
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 2048;
+        sun.shadow.mapSize.height = 2048;
+        scene.add(sun);
+
+        // Neon Accent Lights
+        const cyanLight = new THREE.PointLight(0x00e5ff, 2, 120);
+        cyanLight.position.set(0, 35, 0);
+        scene.add(cyanLight);
+
+        // --- PACIFIC OCEAN WATER SURFACE ---
+        const oceanGeo = new THREE.PlaneGeometry(1200, 1200, 48, 48);
+        const oceanMat = new THREE.MeshStandardMaterial({
+            color: 0x031830,
+            roughness: 0.1,
+            metalness: 0.85
+        });
+        const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+        ocean.rotation.x = -Math.PI / 2;
+        ocean.position.y = -1.5;
+        scene.add(ocean);
+
+        // --- COASTAL SEAWALL & CAMPUS PLAZA ---
+        const plazaGeo = new THREE.BoxGeometry(450, 4, 380);
+        const plazaMat = new THREE.MeshStandardMaterial({ color: 0x1a2638, roughness: 0.6 });
+        const plaza = new THREE.Mesh(plazaGeo, plazaMat);
+        plaza.position.set(0, 0.5, 0);
+        plaza.receiveShadow = true;
+        scene.add(plaza);
+
+        // Breakwater Rocks / Pier
+        const pierGeo = new THREE.BoxGeometry(30, 6, 200);
+        const pierMat = new THREE.MeshStandardMaterial({ color: 0x101a28, roughness: 0.8 });
+        const pier = new THREE.Mesh(pierGeo, pierMat);
+        pier.position.set(-210, 0.5, 90);
+        scene.add(pier);
+
+        // --- INTERACTIVE BUILDINGS & CURRICULUM NODES ---
+        const interactiveMeshes = [];
+        const campusFacilities = [];
+
+        // 1. THE CENTRAL ENGINEERING PAGODA (5 Tiers)
+        const pagodaGroup = new THREE.Group();
+        const tierHeights = [18, 14, 11, 8, 6];
+        const tierWidths = [42, 34, 26, 18, 11];
+        let currentY = 2;
+
+        for (let i = 0; i < 5; i++) {
+            const h = tierHeights[i];
+            const w = tierWidths[i];
+
+            // Tier Room Body
+            const bodyGeo = new THREE.BoxGeometry(w, h, w);
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x1f2e44,
+                roughness: 0.3,
+                metalness: 0.6
+            });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = currentY + h / 2;
+            body.castShadow = true;
+            pagodaGroup.add(body);
+
+            // Flared Curved Pagoda Roof Overhang
+            const roofGeo = new THREE.ConeGeometry(w * 0.9, 4, 4);
+            const roofMat = new THREE.MeshStandardMaterial({
+                color: 0x00c8aa, // Patina Copper
+                roughness: 0.2,
+                metalness: 0.5
+            });
+            const roof = new THREE.Mesh(roofGeo, roofMat);
+            roof.position.y = currentY + h + 1.5;
+            roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true;
+            pagodaGroup.add(roof);
+
+            currentY += h + 3;
+        }
+
+        // Pagoda Spire
+        const spireGeo = new THREE.ConeGeometry(1.5, 28, 8);
+        const spireMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true });
+        const spire = new THREE.Mesh(spireGeo, spireMat);
+        spire.position.y = currentY + 12;
+        pagodaGroup.add(spire);
+
+        scene.add(pagodaGroup);
+
+        // Add Pagoda as Interactive Target
+        const pagodaCollider = new THREE.Mesh(
+            new THREE.BoxGeometry(46, 85, 46),
+            new THREE.MeshBasicMaterial({ visible: false })
+        );
+        pagodaCollider.position.y = 42;
+        scene.add(pagodaCollider);
+        interactiveMeshes.push(pagodaCollider);
+
+        campusFacilities.push({
+            mesh: pagodaCollider,
+            visualGroup: pagodaGroup,
+            title: 'THE CENTRAL ENGINEERING PAGODA',
+            curriculum: 'Computational CFD, High-Performance FEA & Dean\'s Observatory',
+            hours: 'Hours 631–720 (Supercomputing & Capstone)',
+            machines: 'Cray XC50 Blade Cluster + ANSYS Fluent / OpenFOAM Lab',
+            power: '480Y/277V 2500A Isolated Ground Clean Bus',
+            accredit: 'ASME / ABET Criterion 3 Gold Tier'
+        });
+
+        // 2. POLYTECHNIC LAB WINGS (Surrounding the Pagoda)
+        const wings = [
+            {
+                name: 'PACIFIC MARINE & SHIP PROPULSION HALL',
+                x: -120, z: 90, w: 75, h: 22, d: 90, color: 0x0099ff,
+                curriculum: 'Marine Diesels, Shaft Alignment & Cavitation Flow',
+                hours: 'Hours 241–360 (Fluid Mechanics & Piping)',
+                machines: 'Wärtsilä 20 Cylinder Teardown + 5000 HP Dynamometer',
+                power: '480V 3-Phase 1600A Feeder',
+                accredit: 'US Coast Guard Marine Engineering Standard'
+            },
+            {
+                name: 'ORBITAL AEROSPACE & TURBOMACHINERY FOUNDRY',
+                x: 120, z: -90, w: 85, h: 24, d: 90, color: 0xbb33ff,
+                curriculum: 'Gas Turbines, Compressors & Inconel Hot-Section Metallurgy',
+                hours: 'Hours 601–660 (Aerospace Propulsion & Turbines)',
+                machines: 'CFM56 Engine Test Cell + Vacuum Induction Melt Furnace',
+                power: '480V 3-Phase 2000A Switchgear',
+                accredit: 'FAA Part 147 Powerplant / AWS D17.1'
+            },
+            {
+                name: 'SUBTRACTIVE 5-AXIS CNC & TOOL/DIE COMPLEX',
+                x: 130, z: 80, w: 90, h: 20, d: 80, color: 0x00e5ff,
+                curriculum: 'Simultaneous 5-Axis Milling, G-Code & High-Speed Tooling',
+                hours: 'Hours 121–240 (Subtractive Machining & CNC)',
+                machines: 'Hermle C42 5-Axis + Haas VF-4 + Sodick Wire EDM',
+                power: '480V 3-Phase 1200A Busway',
+                accredit: 'NIMS Level 3 CNC Master Machinist'
+            },
+            {
+                name: 'MECHATRONICS, ROBOTICS & PLC AUTOMATION HALL',
+                x: -130, z: -80, w: 80, h: 18, d: 85, color: 0x00ff77,
+                curriculum: '6-Axis Articulated Arms, Fieldbus & GuardLogix Safety',
+                hours: 'Hours 481–600 (Robotics, Hydraulics & PLCs)',
+                machines: 'FANUC M-20iD Cobots + Siemens S7-1500 Modular Racks',
+                power: '480V / 208V Stepped Automation Distribution',
+                accredit: 'RIA (Robotics Industry Association) Certified'
+            },
+            {
+                name: 'STRUCTURAL METALLURGY & INDUSTRIAL FOUNDRY',
+                x: 0, z: -130, w: 110, h: 22, d: 65, color: 0xff4422,
+                curriculum: 'Iron-Carbon Metallurgy, Greensand Casting & Structural TIG',
+                hours: 'Hours 361–480 (Metallurgy & Welding Certification)',
+                machines: 'Dual 2-Ton Induction Furnaces + Miller Dynasty AC/DC TIG',
+                power: '480V 3-Phase 3000A Foundry Service',
+                accredit: 'AWS Certified Welding Fabricator / ASME Section IX'
+            },
+            {
+                name: 'PRECISION METROLOGY & APPLIED STATICS LAB',
+                x: 0, z: 130, w: 100, h: 16, d: 65, color: 0xffaa00,
+                curriculum: 'CMM Measurement, Geometric Dimensioning & Statics FBDs',
+                hours: 'Hours 001–120 (Statics, Dynamics & Metrology)',
+                machines: 'Zeiss PRISMO CMM (0.5 µm accuracy) + Tinius Olsen Tensile Tester',
+                power: '208Y/120V Temperature Controlled Clean Power',
+                accredit: 'ISO/IEC 17025 Calibration Laboratory'
+            }
+        ];
+
+        wings.forEach(w => {
+            const geo = new THREE.BoxGeometry(w.w, w.h, w.d);
+            const mat = new THREE.MeshStandardMaterial({
+                color: w.color,
+                roughness: 0.3,
+                metalness: 0.4
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(w.x, w.h / 2 + 1, w.z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+
+            interactiveMeshes.push(mesh);
+            campusFacilities.push({
+                mesh: mesh,
+                title: w.name,
+                curriculum: w.curriculum,
+                hours: w.hours,
+                machines: w.machines,
+                power: w.power,
+                accredit: w.accredit,
+                baseColor: w.color
+            });
+        });
+
+        // --- INTERACTION & RAYCASTING ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let selectedFacility = null;
+
+        function onPointerDown(e) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(interactiveMeshes);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const facility = campusFacilities.find(f => f.mesh === hit);
+                if (facility) {
+                    selectFacility(facility);
+                }
+            }
+        }
+
+        function selectFacility(facility) {
+            if (selectedFacility && selectedFacility !== facility) {
+                if (selectedFacility.mesh.material.emissive) {
+                    selectedFacility.mesh.material.emissive.setHex(0x000000);
+                }
+            }
+            selectedFacility = facility;
+            if (facility.mesh.material.emissive) {
+                facility.mesh.material.emissive.setHex(0x334466);
+            }
+
+            document.getElementById('hud-title').innerText = facility.title;
+            document.getElementById('hud-curriculum').innerText = facility.curriculum;
+            document.getElementById('hud-hours').innerText = facility.hours;
+            document.getElementById('hud-machines').innerText = facility.machines;
+            document.getElementById('hud-power').innerText = facility.power;
+            document.getElementById('hud-accredit').innerText = facility.accredit;
+            document.getElementById('telemetry-card').classList.remove('empty');
+        }
+
+        window.addEventListener('pointerdown', onPointerDown);
+
+        // Camera Views
+        window.setView = function(type) {
+            if (type === 'pagoda') {
+                camera.position.set(0, 90, 150);
+                controls.target.set(0, 45, 0);
+                selectFacility(campusFacilities[0]);
+            } else if (type === 'aerospace') {
+                camera.position.set(220, 90, -160);
+                controls.target.set(120, 15, -90);
+                selectFacility(campusFacilities[2]);
+            } else if (type === 'maritime') {
+                camera.position.set(-240, 80, 160);
+                controls.target.set(-120, 15, 90);
+                selectFacility(campusFacilities[1]);
+            } else {
+                camera.position.set(240, 160, 260);
+                controls.target.set(0, 20, 0);
+            }
+        };
+
+        // --- RENDER & WATER ANIMATION LOOP ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+
+            // Subtle ocean wave undulation
+            const pos = oceanGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const u = pos.getX(i);
+                const v = pos.getY(i);
+                pos.setZ(i, Math.sin(u * 0.02 + t * 1.5) * Math.cos(v * 0.02 + t * 1.2) * 1.8);
+            }
+            oceanGeo.computeVertexNormals();
+            oceanGeo.attributes.position.needsUpdate = true;
+
+            spire.rotation.y = t * 0.3;
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
